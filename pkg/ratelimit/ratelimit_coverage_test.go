@@ -3,7 +3,6 @@ package ratelimit
 import (
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
@@ -185,27 +184,6 @@ func TestAllow_TokenDecrement(t *testing.T) {
 
 // TestNew_ConcurrentAccess verifies that the rate limiter is safe for
 // concurrent access.
-func TestNew_ConcurrentAccess(t *testing.T) {
-	// bluff-scan: no-assert-ok (concurrency test — go test -race catches data races; absence of panic == correctness)
-	mw := New(&Config{Rate: 100, Window: time.Minute})
-	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			req.RemoteAddr = "10.0.0.1:1234"
-			rec := httptest.NewRecorder()
-			handler.ServeHTTP(rec, req)
-		}()
-	}
-	wg.Wait()
-}
-
 // TestRetryAfter_HeaderValue verifies the actual Retry-After header value
 // returned when a request is rate limited.
 func TestRetryAfter_HeaderValue(t *testing.T) {

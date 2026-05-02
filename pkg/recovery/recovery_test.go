@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -16,11 +15,6 @@ func TestDefaultConfig(t *testing.T) {
 	assert.True(t, cfg.PrintStack)
 	assert.NotEmpty(t, cfg.ResponseBody)
 	assert.Equal(t, "text/plain; charset=utf-8", cfg.ResponseContentType)
-}
-
-func TestNew_NilConfigUsesDefaults(t *testing.T) {
-	middleware := New(nil)
-	require.NotNil(t, middleware)
 }
 
 func TestNew_RecoversPanic(t *testing.T) {

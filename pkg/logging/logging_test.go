@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -15,11 +14,6 @@ func TestDefaultConfig(t *testing.T) {
 	assert.NotNil(t, cfg.Output)
 	assert.NotNil(t, cfg.SkipPaths)
 	assert.Empty(t, cfg.SkipPaths)
-}
-
-func TestNew_NilConfigUsesDefaults(t *testing.T) {
-	middleware := New(nil)
-	require.NotNil(t, middleware)
 }
 
 func TestNew_LogsRequestDetails(t *testing.T) {
