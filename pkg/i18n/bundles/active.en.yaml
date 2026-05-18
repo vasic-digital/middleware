@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Milos Vasic
+#
+# Middleware active English bundle.
+# Message IDs are prefixed `middleware_` for namespace clarity when
+# bundled alongside other vasic-digital library surfaces.
+#
+# CONST-046 (no-hardcoded-content) lineage:
+# - Round 72 (2026-05-13) audit identified the auth/ratelimit/validation
+#   `http.Error` strings as hardcoded English deferred until i18n design
+#   landed.
+# - Round 124 (2026-05-18) migrated them per the i18n kickoff pattern
+#   shared across the HelixCode Phase 4 sweep (DocProcessor / VectorDB /
+#   MCP_Module / Messaging / Lazy / Storage / VisionEngine / LLMOrch /
+#   HelixSpecifier siblings).
+#
+# Placeholders use `{{.name}}` style; consuming Translator
+# implementations may pick any template engine compatible with that
+# arg map.
+middleware_auth_unauthorized: "Unauthorized"
+middleware_ratelimit_too_many_requests: "Too Many Requests"
+middleware_validation_unsupported_media_type: "Unsupported Media Type"

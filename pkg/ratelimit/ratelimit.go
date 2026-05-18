@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"digital.vasic.middleware/pkg/i18n"
 )
 
 // KeyFunc extracts a rate-limiting key from the request (e.g., client IP).
@@ -26,6 +28,10 @@ type Config struct {
 	// KeyFunc extracts the rate-limiting key from the request.
 	// Defaults to client IP from RemoteAddr.
 	KeyFunc KeyFunc
+	// Translator sources the 429 response body per CONST-046.
+	// Defaults to i18n.NoopTranslator{} (returns message ID verbatim,
+	// preserving anti-bluff visibility in captured wire traffic).
+	Translator i18n.Translator
 }
 
 // DefaultConfig returns a default rate limiter configuration
@@ -102,6 +108,9 @@ func New(cfg *Config) func(http.Handler) http.Handler {
 			return r.RemoteAddr
 		}
 	}
+	if cfg.Translator == nil {
+		cfg.Translator = i18n.NoopTranslator{}
+	}
 
 	l := &limiter{
 		buckets: make(map[string]*bucket),
@@ -109,6 +118,7 @@ func New(cfg *Config) func(http.Handler) http.Handler {
 		window:  cfg.Window,
 		keyFunc: cfg.KeyFunc,
 	}
+	translator := cfg.Translator
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +126,8 @@ func New(cfg *Config) func(http.Handler) http.Handler {
 			if !l.allow(key) {
 				retry := l.retryAfter(key)
 				w.Header().Set("Retry-After", strconv.Itoa(retry))
-				http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+				body := translator.T(r.Context(), "middleware_ratelimit_too_many_requests", nil)
+				http.Error(w, body, http.StatusTooManyRequests)
 				return
 			}
 			next.ServeHTTP(w, r)

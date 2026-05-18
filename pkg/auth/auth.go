@@ -11,6 +11,8 @@ import (
 	"context"
 	"net/http"
 	"strings"
+
+	"digital.vasic.middleware/pkg/i18n"
 )
 
 type contextKey string
@@ -44,11 +46,18 @@ type ErrorResponder interface {
 	RespondUnauthorized(w http.ResponseWriter, r *http.Request, err error)
 }
 
-// defaultErrorResponder writes a plain-text 401 response.
-type defaultErrorResponder struct{}
+// defaultErrorResponder writes a plain-text 401 response whose body
+// is sourced from the configured Translator (CONST-046). The default
+// Translator is i18n.NoopTranslator{}, which returns the msgID
+// verbatim — callers wiring a real bundle/LLM-backed Translator get
+// localised bodies for free without modifying this middleware.
+type defaultErrorResponder struct {
+	translator i18n.Translator
+}
 
 func (d defaultErrorResponder) RespondUnauthorized(w http.ResponseWriter, r *http.Request, err error) {
-	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	body := d.translator.T(r.Context(), "middleware_auth_unauthorized", nil)
+	http.Error(w, body, http.StatusUnauthorized)
 }
 
 // Middleware returns HTTP middleware that validates JWT tokens.
@@ -56,11 +65,18 @@ func (d defaultErrorResponder) RespondUnauthorized(w http.ResponseWriter, r *htt
 // Valid claims are stored in the request context.
 func Middleware(validator TokenValidator, opts ...Option) func(http.Handler) http.Handler {
 	cfg := config{
-		responder:  defaultErrorResponder{},
+		responder:  defaultErrorResponder{translator: i18n.NoopTranslator{}},
 		skipPaths:  make(map[string]bool),
+		translator: i18n.NoopTranslator{},
 	}
 	for _, opt := range opts {
 		opt(&cfg)
+	}
+	// If the caller wired a Translator but kept the default responder,
+	// re-bind the responder to use the wired Translator. Custom
+	// responders supplied via WithErrorResponder are left untouched.
+	if _, ok := cfg.responder.(defaultErrorResponder); ok {
+		cfg.responder = defaultErrorResponder{translator: cfg.translator}
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -106,8 +122,9 @@ func extractToken(r *http.Request) string {
 type Option func(*config)
 
 type config struct {
-	responder ErrorResponder
-	skipPaths map[string]bool
+	responder  ErrorResponder
+	skipPaths  map[string]bool
+	translator i18n.Translator
 }
 
 // WithErrorResponder sets a custom error responder.
@@ -120,6 +137,20 @@ func WithSkipPaths(paths ...string) Option {
 	return func(c *config) {
 		for _, p := range paths {
 			c.skipPaths[p] = true
+		}
+	}
+}
+
+// WithTranslator wires a Translator used by the default error
+// responder when emitting the 401 body. Consuming projects pass a
+// real i18n.Translator (bundle-backed or LLM-backed) per CONST-046;
+// the default is i18n.NoopTranslator{} which returns the message ID
+// verbatim so anti-bluff evidence remains visible in captured wire
+// traffic.
+func WithTranslator(tr i18n.Translator) Option {
+	return func(c *config) {
+		if tr != nil {
+			c.translator = tr
 		}
 	}
 }

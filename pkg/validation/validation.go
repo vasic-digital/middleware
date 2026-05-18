@@ -10,6 +10,8 @@ package validation
 import (
 	"net/http"
 	"strings"
+
+	"digital.vasic.middleware/pkg/i18n"
 )
 
 // Config holds validation middleware configuration.
@@ -23,6 +25,10 @@ type Config struct {
 	// Methods that require content-type validation.
 	// Defaults to POST, PUT, PATCH.
 	BodyMethods []string
+	// Translator sources the 415 response body per CONST-046.
+	// Defaults to i18n.NoopTranslator{} (returns message ID verbatim,
+	// preserving anti-bluff visibility in captured wire traffic).
+	Translator i18n.Translator
 }
 
 // DefaultConfig returns a default validation configuration.
@@ -42,11 +48,15 @@ func New(cfg *Config) func(http.Handler) http.Handler {
 	if len(cfg.BodyMethods) == 0 {
 		cfg.BodyMethods = []string{"POST", "PUT", "PATCH"}
 	}
+	if cfg.Translator == nil {
+		cfg.Translator = i18n.NoopTranslator{}
+	}
 
 	bodyMethodSet := make(map[string]bool, len(cfg.BodyMethods))
 	for _, m := range cfg.BodyMethods {
 		bodyMethodSet[m] = true
 	}
+	translator := cfg.Translator
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +67,8 @@ func New(cfg *Config) func(http.Handler) http.Handler {
 			if len(cfg.RequireContentType) > 0 && bodyMethodSet[r.Method] {
 				ct := r.Header.Get("Content-Type")
 				if ct == "" || !matchesContentType(ct, cfg.RequireContentType) {
-					http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+					body := translator.T(r.Context(), "middleware_validation_unsupported_media_type", nil)
+					http.Error(w, body, http.StatusUnsupportedMediaType)
 					return
 				}
 			}
