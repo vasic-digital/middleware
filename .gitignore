@@ -1,35 +1,78 @@
-# Binaries for programs and plugins
+# CONST-053 .gitignore — Middleware
+# Per HelixConstitution §11.4.30 (.gitignore + No-Versioned-Build-Artifacts).
+
+# --- Build artefacts ---
+/bin/
+/build/
+/dist/
+/out/
+target/
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+*.a
+*.o
+*.class
+*.pyc
 
-# Test binary, built with `go test -c`
+# Test binaries (go test -c)
 *.test
 
-# Output of the go coverage tool
-*.out
-coverage.html
+# --- Cache files ---
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.next/
+.cache/
+.gradle/
+.terraform/
 
-# Go workspace file
+# --- Go-specific ---
 go.work
 go.work.sum
-
-# Dependency directories
 vendor/
 
-# IDE
-.idea/
-.vscode/
+# Coverage / profiling output
+*.out
+coverage.html
+coverage.txt
+htmlcov/
+
+# --- Temp files ---
+*.tmp
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
+*.orig
+*.rej
 
-# Environment
+# --- Sensitive-data files (CONST-042 + CONST-053 #4) ---
 .env
 .env.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+id_rsa*
+id_ed25519*
+.netrc
+secrets/
+api_keys.sh
+
+# --- Generated reports / logs ---
+*.log
+
+# --- OS / IDE personal state ---
+.idea/
+.history/
+.vscode/
+
+# --- Round-251 runner / build leftovers ---
+/tmp/mw_round251_runner

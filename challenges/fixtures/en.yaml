@@ -1,0 +1,36 @@
+# Round-251 bilingual fixture for Middleware (English locale).
+# Exercised by challenges/runner/main.go against the real net/http handler
+# chain composed of requestid -> logging -> recovery -> cors. Anti-bluff
+# invariant (CONST-035 / Article XI §11.9):
+#   every request body sent through the chain MUST be returned byte-for-byte
+#   by the terminal handler; every response header set by the middleware
+#   MUST be observable in the captured response; preflight MUST short-circuit
+#   with 204; injected panics MUST be caught and returned as 500.
+locale: en
+description: ASCII paths, ASCII bodies, ASCII headers exercised against real net/http chain.
+requests:
+  - method: GET
+    path: /api/hello
+    body: ""
+    expect_status: 200
+    expect_body: "Hello, world!"
+    expect_request_id_set: true
+  - method: POST
+    path: /api/echo
+    body: |
+      {"message":"Middleware round-251 challenge."}
+    expect_status: 200
+    expect_body_contains: "Middleware round-251 challenge."
+    expect_request_id_set: true
+  - method: OPTIONS
+    path: /api/hello
+    origin: "https://example.com"
+    body: ""
+    expect_status: 204
+    expect_cors_origin: "*"
+  - method: GET
+    path: /api/panic
+    body: ""
+    expect_status: 500
+    expect_body_contains: "Internal Server Error"
+    expect_request_id_set: true

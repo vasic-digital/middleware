@@ -1,0 +1,33 @@
+# Round-251 bilingual fixture for Middleware (Serbian Latin locale).
+# Exercises non-ASCII URL paths and UTF-8 request/response bodies — proves
+# the Middleware chain (requestid -> logging -> recovery -> cors) does not
+# silently corrupt multi-byte UTF-8 sequences in path, body, or echoed
+# headers. CONST-046 + Article XI §11.9 alignment.
+locale: sr-Latn
+description: Latinic Serbian URL paths + bodies; round-trip equality required.
+requests:
+  - method: GET
+    path: /api/pozdrav
+    body: ""
+    expect_status: 200
+    expect_body: "Zdravo, svete!"
+    expect_request_id_set: true
+  - method: POST
+    path: /api/odjek
+    body: |
+      {"poruka":"Middleware izazov broj 251 — dijakritika: čšđžć."}
+    expect_status: 200
+    expect_body_contains: "dijakritika: čšđžć"
+    expect_request_id_set: true
+  - method: OPTIONS
+    path: /api/pozdrav
+    origin: "https://primer.rs"
+    body: ""
+    expect_status: 204
+    expect_cors_origin: "*"
+  - method: GET
+    path: /api/panika
+    body: ""
+    expect_status: 500
+    expect_body_contains: "Internal Server Error"
+    expect_request_id_set: true
