@@ -13,6 +13,9 @@
 #   shared across the HelixCode Phase 4 sweep (DocProcessor / VectorDB /
 #   MCP_Module / Messaging / Lazy / Storage / VisionEngine / LLMOrch /
 #   HelixSpecifier siblings).
+# - Round 404 (2026-05-20) migrated the recovery middleware's panic
+#   response body — the only remaining user-facing HTTP-body literal in
+#   this submodule's middleware surface.
 #
 # Placeholders use `{{.name}}` style; consuming Translator
 # implementations may pick any template engine compatible with that
@@ -20,3 +23,4 @@
 middleware_auth_unauthorized: "Unauthorized"
 middleware_ratelimit_too_many_requests: "Too Many Requests"
 middleware_validation_unsupported_media_type: "Unsupported Media Type"
+middleware_recovery_internal_server_error: "Internal Server Error"

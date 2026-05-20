@@ -10,7 +10,16 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+
+	"digital.vasic.middleware/pkg/i18n"
 )
+
+// msgInternalServerError is the i18n message ID for the default panic
+// response body. Per CONST-046 (no-hardcoded-content) the English text
+// lives in the i18n bundle, not as a literal in this source file; a
+// Serbian or Japanese end user receives a localised 500 body when the
+// consuming project wires a bundle/LLM-backed Translator.
+const msgInternalServerError = "middleware_recovery_internal_server_error"
 
 // Config holds configuration for the recovery middleware.
 type Config struct {
@@ -22,23 +31,33 @@ type Config struct {
 	// log output. Defaults to true.
 	PrintStack bool
 
-	// ResponseBody is the body returned to the client on panic. If nil a
-	// default plain-text message is used.
+	// ResponseBody is the body returned to the client on panic. If nil the
+	// configured Translator renders the default localised message at
+	// request time (CONST-046). Setting ResponseBody explicitly takes
+	// precedence over the Translator and is returned verbatim.
 	ResponseBody []byte
 
 	// ResponseContentType is the Content-Type header for the error response.
 	// Defaults to "text/plain; charset=utf-8".
 	ResponseContentType string
+
+	// Translator renders the panic response body when ResponseBody is nil.
+	// Defaults to i18n.NoopTranslator{}, which returns the message ID
+	// verbatim so absence-of-bundle is loudly visible in captured HTTP
+	// responses. Consumers wire a real bundle-backed or LLM-backed
+	// Translator for localised 500 bodies without modifying this package.
+	Translator i18n.Translator
 }
 
 // DefaultConfig returns a default recovery configuration that logs to stderr
-// with stack traces enabled.
+// with stack traces enabled. The response body is rendered at request time
+// from the i18n Translator (CONST-046).
 func DefaultConfig() *Config {
 	return &Config{
 		Output:              os.Stderr,
 		PrintStack:          true,
-		ResponseBody:        []byte("Internal Server Error\n"),
 		ResponseContentType: "text/plain; charset=utf-8",
+		Translator:          i18n.NoopTranslator{},
 	}
 }
 
@@ -51,11 +70,11 @@ func New(cfg *Config) func(http.Handler) http.Handler {
 	if cfg.Output == nil {
 		cfg.Output = os.Stderr
 	}
-	if cfg.ResponseBody == nil {
-		cfg.ResponseBody = []byte("Internal Server Error\n")
-	}
 	if cfg.ResponseContentType == "" {
 		cfg.ResponseContentType = "text/plain; charset=utf-8"
+	}
+	if cfg.Translator == nil {
+		cfg.Translator = i18n.NoopTranslator{}
 	}
 
 	logger := log.New(cfg.Output, "", log.LstdFlags)
@@ -72,11 +91,23 @@ func New(cfg *Config) func(http.Handler) http.Handler {
 
 					w.Header().Set("Content-Type", cfg.ResponseContentType)
 					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprint(w, string(cfg.ResponseBody))
+					fmt.Fprint(w, responseBody(cfg, r))
 				}
 			}()
 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// responseBody returns the panic response body. An explicit
+// Config.ResponseBody wins verbatim; otherwise the body is rendered from
+// the configured Translator using the request context so per-request
+// Accept-Language negotiation performed by the consuming project is
+// honoured (CONST-046).
+func responseBody(cfg *Config, r *http.Request) string {
+	if cfg.ResponseBody != nil {
+		return string(cfg.ResponseBody)
+	}
+	return cfg.Translator.T(r.Context(), msgInternalServerError, nil) + "\n"
 }
