@@ -10,7 +10,7 @@
 #   `http.Error` strings as hardcoded English deferred until i18n design
 #   landed.
 # - Round 124 (2026-05-18) migrated them per the i18n kickoff pattern
-#   shared across the HelixCode Phase 4 sweep (DocProcessor / VectorDB /
+#   shared across the consuming project's Phase 4 sweep (DocProcessor / VectorDB /
 #   MCP_Module / Messaging / Lazy / Storage / VisionEngine / LLMOrch /
 #   HelixSpecifier siblings).
 # - Round 404 (2026-05-20) migrated the recovery middleware's panic

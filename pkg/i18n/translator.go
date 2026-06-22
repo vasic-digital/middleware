@@ -12,7 +12,7 @@
 // implementation that loads bundles, calls an LLM, or composes from
 // configuration at runtime.
 //
-// Round 124 of the HelixCode CONST-046 sweep introduced this contract
+// Round 124 of the consuming project's CONST-046 sweep introduced this contract
 // to externalise the three plain-text HTTP error body literals embedded
 // in the auth (`"Unauthorized"`), ratelimit (`"Too Many Requests"`),
 // and validation (`"Unsupported Media Type"`) middlewares. Those
